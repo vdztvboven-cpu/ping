@@ -41,6 +41,122 @@
     padding:28px;
     box-shadow:0 0 0 1px rgba(57,255,136,.04), 0 20px 60px -20px rgba(0,0,0,.6);
   }
+
+  /* --- phone animation --- */
+  .phone-wrap{
+    display:flex;
+    justify-content:center;
+    margin:0 0 22px;
+  }
+  .phone{
+    width:130px;
+    height:250px;
+    background:#04060a;
+    border:2px solid #20272f;
+    border-radius:22px;
+    padding:8px 7px;
+    position:relative;
+    box-shadow:0 10px 30px -10px rgba(0,0,0,.7);
+  }
+  .phone.buzz{ animation: buzz .45s ease; }
+  @keyframes buzz{
+    0%,100%{ transform: translateX(0) rotate(0); }
+    10%{ transform: translateX(-2px) rotate(-1deg); }
+    20%{ transform: translateX(2px) rotate(1deg); }
+    30%{ transform: translateX(-2px) rotate(-1deg); }
+    40%{ transform: translateX(2px) rotate(1deg); }
+    55%{ transform: translateX(-1px); }
+    70%{ transform: translateX(1px); }
+    85%{ transform: translateX(0); }
+  }
+  .notch{
+    position:absolute;
+    top:8px; left:50%;
+    transform:translateX(-50%);
+    width:36px; height:5px;
+    background:#0d1216;
+    border-radius:4px;
+    z-index:2;
+  }
+  .screen{
+    width:100%; height:100%;
+    background:linear-gradient(180deg,#0d1216,#0a0e12);
+    border-radius:16px;
+    overflow:hidden;
+    position:relative;
+    animation: glow 3s ease-in-out infinite;
+  }
+  @keyframes glow{
+    0%,100%{ box-shadow: inset 0 0 18px rgba(57,255,136,.03); }
+    50%{ box-shadow: inset 0 0 24px rgba(57,255,136,.08); }
+  }
+  .statusbar{
+    display:flex;
+    justify-content:space-between;
+    padding:10px 12px 0;
+    font-size:8px;
+    color:var(--dim);
+    letter-spacing:.04em;
+  }
+  .placeholder{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-size:9px;
+    color:var(--dim);
+    padding:0 18px;
+    line-height:1.5;
+    transition:opacity .3s;
+  }
+  .notification{
+    position:absolute;
+    top:24px; left:6px; right:6px;
+    background:#171d23;
+    border:1px solid #262e36;
+    border-radius:9px;
+    padding:8px 9px;
+    display:flex;
+    gap:7px;
+    align-items:flex-start;
+    transform:translateY(-160%);
+    opacity:0;
+    box-shadow:0 6px 16px -6px rgba(0,0,0,.6);
+  }
+  .notification.show{
+    animation: notify-in .55s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  @keyframes notify-in{
+    0%{ transform:translateY(-160%); opacity:0; }
+    60%{ transform:translateY(6%); opacity:1; }
+    80%{ transform:translateY(-2%); }
+    100%{ transform:translateY(0); opacity:1; }
+  }
+  .notif-icon{
+    width:16px; height:16px;
+    flex-shrink:0;
+    border-radius:5px;
+    background:var(--accent);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9px;
+  }
+  .notif-title{
+    font-size:8px;
+    color:var(--accent);
+    font-weight:600;
+    margin-bottom:2px;
+  }
+  .notif-body{
+    font-size:8px;
+    color:var(--text);
+    line-height:1.4;
+    word-break:break-word;
+  }
+
   .prompt{
     color:var(--accent);
     font-size:13px;
@@ -122,6 +238,24 @@
 <body>
   <div class="crt"></div>
   <div class="card">
+
+    <div class="phone-wrap">
+      <div class="phone" id="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span>●●●</span></div>
+          <div class="placeholder" id="placeholder">send something below<br>and watch it land here</div>
+          <div class="notification" id="notif">
+            <div class="notif-icon">●</div>
+            <div class="notif-text">
+              <div class="notif-title">ping_kulderzipke</div>
+              <div class="notif-body" id="notifBody"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <p class="prompt">&gt; anonymous_inbox</p>
     <h1>Send me something</h1>
     <p class="sub">Whatever you type here goes straight to a push notification on my phone. No account, no logging, no IP storage on this page.</p>
@@ -143,10 +277,14 @@
   const NTFY_TOPIC = "ping_kulderzipke";
   const NTFY_URL = `https://ntfy.sh/${NTFY_TOPIC}`;
 
-  const textarea = document.getElementById("msg");
-  const counter  = document.getElementById("count");
-  const button   = document.getElementById("sendBtn");
-  const status   = document.getElementById("status");
+  const textarea    = document.getElementById("msg");
+  const counter      = document.getElementById("count");
+  const button       = document.getElementById("sendBtn");
+  const status        = document.getElementById("status");
+  const phone        = document.getElementById("phone");
+  const notif        = document.getElementById("notif");
+  const notifBody    = document.getElementById("notifBody");
+  const placeholder  = document.getElementById("placeholder");
 
   textarea.addEventListener("input", () => {
     counter.textContent = `${textarea.value.length} / 800`;
@@ -170,6 +308,7 @@
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
+      playArrival(message);
       textarea.value = "";
       counter.textContent = "0 / 800";
       setStatus("Sent ✓", "ok");
@@ -179,6 +318,21 @@
       button.disabled = false;
     }
   });
+
+  function playArrival(message) {
+    placeholder.style.opacity = "0";
+
+    notifBody.textContent = message.length > 70 ? message.slice(0, 70) + "…" : message;
+
+    // restart buzz animation even if it just played
+    phone.classList.remove("buzz");
+    void phone.offsetWidth;
+    phone.classList.add("buzz");
+
+    notif.classList.remove("show");
+    void notif.offsetWidth;
+    notif.classList.add("show");
+  }
 
   function setStatus(text, kind) {
     status.textContent = text;
