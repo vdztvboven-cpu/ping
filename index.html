@@ -166,10 +166,6 @@
       const res = await fetch(NTFY_URL, {
         method: "POST",
         body: message,
-        headers: {
-          "Title": "New anonymous message",
-          "Tags": "speech_balloon"
-        }
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
