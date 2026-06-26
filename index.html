@@ -60,7 +60,6 @@
     line-height:1.5;
   }
   .warn-banner{
-    display:none;
     background:rgba(255,184,77,.08);
     border:1px solid var(--warn-dim);
     color:var(--warn);
@@ -70,7 +69,6 @@
     padding:10px 12px;
     margin:0 0 18px;
   }
-  .warn-banner.show{display:block;}
   textarea{
     width:100%;
     min-height:120px;
@@ -114,9 +112,8 @@
   .status{
     margin-top:14px;
     font-size:12px;
-    min-height:32px;
+    min-height:16px;
     color:var(--dim);
-    line-height:1.5;
   }
   .status.ok{color:var(--accent);}
   .status.err{color:#ff5c5c;}
@@ -129,8 +126,8 @@
     <h1>Send me something</h1>
     <p class="sub">Whatever you type here goes straight to a push notification on my phone. No account, no logging, no IP storage on this page.</p>
 
-    <div class="warn-banner" id="warnBanner">
-      ⚠ Looks like an ad blocker or privacy extension might be blocking this form (it blocks requests to ntfy.sh). If sending fails, try disabling it for this site, or use a different browser.
+    <div class="warn-banner">
+      ⚠ If sending fails, it's likely an ad blocker or privacy extension blocking this form. Try disabling it for this site, or use a different browser.
     </div>
 
     <textarea id="msg" maxlength="800" placeholder="Type your message..."></textarea>
@@ -143,40 +140,16 @@
 
 <script>
   // === CONFIG ===
-  // Change this to your own secret topic name (see the explanation that came with this page).
-  // The longer and more random it is, the more private/anonymous the inbox stays.
   const NTFY_TOPIC = "ping_kulderzipke";
   const NTFY_URL = `https://ntfy.sh/${NTFY_TOPIC}`;
 
-  const textarea   = document.getElementById("msg");
-  const counter    = document.getElementById("count");
-  const button     = document.getElementById("sendBtn");
-  const status     = document.getElementById("status");
-  const warnBanner = document.getElementById("warnBanner");
+  const textarea = document.getElementById("msg");
+  const counter  = document.getElementById("count");
+  const button   = document.getElementById("sendBtn");
+  const status   = document.getElementById("status");
 
   textarea.addEventListener("input", () => {
     counter.textContent = `${textarea.value.length} / 800`;
-  });
-
-  // --- Adblocker / blocked-request detection ---
-  // A HEAD request never publishes a message, it's just a connectivity probe.
-  // If the browser throws (rather than returning any HTTP response, even an error one),
-  // that's the signature of a blocked request (ad blocker / privacy extension / DNS block),
-  // not a normal server error.
-  async function checkConnectivity() {
-    try {
-      await fetch(NTFY_URL, { method: "HEAD", mode: "cors" });
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  window.addEventListener("DOMContentLoaded", async () => {
-    const ok = await checkConnectivity();
-    if (!ok) {
-      warnBanner.classList.add("show");
-    }
   });
 
   button.addEventListener("click", async () => {
@@ -205,8 +178,7 @@
       counter.textContent = "0 / 800";
       setStatus("Sent ✓", "ok");
     } catch (err) {
-      warnBanner.classList.add("show");
-      setStatus("Couldn't send — this is usually an ad blocker or privacy extension blocking ntfy.sh. Try disabling it for this site, or use a different browser.", "err");
+      setStatus("Failed to send, try again.", "err");
     } finally {
       button.disabled = false;
     }
